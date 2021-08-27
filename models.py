@@ -3,6 +3,8 @@
 from sentiment_data import *
 from utils import *
 import re
+import random
+# from .utils import Indexer
 
 from collections import Counter
 
@@ -11,6 +13,7 @@ class FeatureExtractor(object):
     Feature extraction base type. Takes a sentence and returns an indexed list of features.
     """
     def get_indexer(self):
+        # self.index = Indexer()
         raise Exception("Don't call me, call my subclasses")
 
     def extract_features(self, sentence: List[str], add_to_indexer: bool=False) -> Counter:
@@ -23,9 +26,21 @@ class FeatureExtractor(object):
         a few indices have nonzero value) in essentially the same way as a map. However, you can use whatever data
         structure you prefer, since this does not interact with the framework code.
         """
-        preprocessed = re.sub(r'[^\w\s]', ' ', sentence).lower()
-        sparse_vect = Counter(preprocessed.split())
-        return sparse_vect
+        #preform check if valid word and preprocess
+        preprocessed = []
+        for word in sentence:
+            preprocessed.append(re.sub(r'[^\w\s]', '', word).lower())
+        while('' in preprocessed):
+            preprocessed.remove('')
+
+        #index sentence
+        # if self.indexer.index_of(word) == -1 and add_to_indexer:
+        #     self.indexer.add_and_get_index(word)
+
+
+
+        # sparse_vect = Counter(preprocessed)
+        return preprocessed
 
         # raise Exception("Don't call me, call my subclasses")
 
@@ -36,7 +51,9 @@ class UnigramFeatureExtractor(FeatureExtractor):
     and any additional preprocessing you want to do.
     """
     def __init__(self, indexer: Indexer):
-        raise Exception("Must be implemented")
+        self.indexer = Indexer()
+        print("hello")
+        # raise Exception("Must be implemented")
 
 
 class BigramFeatureExtractor(FeatureExtractor):
@@ -92,7 +109,7 @@ class PerceptronClassifier(SentimentClassifier):
     def update(self, y_pred, y_label):
         if y_pred != y_label:
             self.weights += self.alpa * y_pred
-            
+
 
 class LogisticRegressionClassifier(SentimentClassifier):
     """
@@ -111,7 +128,24 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     :param feat_extractor: feature extractor to use
     :return: trained PerceptronClassifier model
     """
-    raise Exception("Must be implemented")
+    # epochs = 10
+    # model = PerceptronClassifier()
+    # extractor = UnigramFeatureExtractor()
+    short_list = train_exs[:3]
+    random.shuffle(short_list)
+    for item in short_list:
+        print(item)
+        print(type(item))
+        # print(sentence)
+    # print(train_exs[:10])
+
+    # for epoch in range(epoch):
+    #     shuffled_data = train_exs.shuffle()
+    #     for data in shuffled_data:
+            # feature =  UnigramFeatureExtractor.extract(data)
+            # y_pred = PerceptronClassifier(feat_extractor)
+
+    # raise Exception("Must be implemented")
 
 
 def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor: FeatureExtractor) -> LogisticRegressionClassifier:
@@ -161,4 +195,4 @@ def train_model(args, train_exs: List[SentimentExample], dev_exs: List[Sentiment
     return model
 
 feat = FeatureExtractor()
-print(feat.extract_features("hello world.Hou AREA! heLlo# hellO! world hello  "))
+print(feat.extract_features(['The', 'Rock', 'is', 'destined', 'to', 'be', 'the', '21st', 'Century', "'s", 'new', '``', 'Conan', "''", 'and', 'that', 'he', "'s", 'going', 'to', 'make', 'a', 'splash', 'even', 'greater', 'than', 'Arnold', 'Schwarzenegger', ',', 'Jean-Claud', 'Van', 'Damme', 'or', 'Steven', 'Segal', '.']))
