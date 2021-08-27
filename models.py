@@ -2,6 +2,7 @@
 
 from sentiment_data import *
 from utils import *
+import re
 
 from collections import Counter
 
@@ -22,7 +23,11 @@ class FeatureExtractor(object):
         a few indices have nonzero value) in essentially the same way as a map. However, you can use whatever data
         structure you prefer, since this does not interact with the framework code.
         """
-        raise Exception("Don't call me, call my subclasses")
+        preprocessed = re.sub(r'[^\w\s]', ' ', sentence).lower()
+        sparse_vect = Counter(preprocessed.split())
+        return sparse_vect
+
+        # raise Exception("Don't call me, call my subclasses")
 
 
 class UnigramFeatureExtractor(FeatureExtractor):
@@ -76,9 +81,18 @@ class PerceptronClassifier(SentimentClassifier):
     superclass. Hint: you'll probably need this class to wrap both the weight vector and featurizer -- feel free to
     modify the constructor to pass these in.
     """
-    def __init__(self):
-        raise Exception("Must be implemented")
+    def __init__(self, alpha):
+        self.weights = [0] * 10 # length of bag of words
+        self.alpa = .1
+    
+    def forward(self, x):
+        y = self.weights * x 
+        return 1 if y >= 0 else -1
 
+    def update(self, y_pred, y_label):
+        if y_pred != y_label:
+            self.weights += self.alpa * y_pred
+            
 
 class LogisticRegressionClassifier(SentimentClassifier):
     """
@@ -145,3 +159,6 @@ def train_model(args, train_exs: List[SentimentExample], dev_exs: List[Sentiment
     else:
         raise Exception("Pass in TRIVIAL, PERCEPTRON, or LR to run the appropriate system")
     return model
+
+feat = FeatureExtractor()
+print(feat.extract_features("hello world.Hou AREA! heLlo# hellO! world hello  "))
