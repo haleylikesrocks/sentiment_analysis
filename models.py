@@ -9,13 +9,6 @@ import heapq
 
 from collections import Counter
 
-def sparse_vector_dot(a: dict, b: dict):
-    result = 0
-    for key, value in a.items():
-        if key in b:
-            result += b[key] * value
-    return result
-
 class FeatureExtractor(object):
     """
     Feature extraction base type. Takes a sentence and returns an indexed list of features.
@@ -131,21 +124,21 @@ class PerceptronClassifier(SentimentClassifier):
     superclass. Hint: you'll probably need this class to wrap both the weight vector and featurizer -- feel free to
     modify the constructor to pass these in.
     """
-    def __init__(self, wieghts=[]):
-        self.weights = wieghts # empty dictionary
+    def __init__(self):
+        self.weights = np.zeros(5000) # empty dictionary
         self.alpa = .1
     
     def predict(self, x) -> int:
-        y = sparse_vector_dot(x, self.weights)
-        return y
+        y = 0
+        for key, value in x:
+            y += value * self.weights[key]
+        ret = 1 if y > 0 else 0
+        return ret
 
-    def update(self, feature):
-        # TODO move to training code
-        for key, value in x.items():
-            if key in self.weights:
-                self.weights[key] += self.alpa * y_pred * value
-            else:
-                self.weights[key] = y_label - self.alpa * y_pred * value
+    def update(self, y_true, feature):
+        mult = 1 if y_true == 1 else -1
+        for key, value in feature.items():
+            self.weights[key] += self.alpa * value * mult
 
 
 class LogisticRegressionClassifier(SentimentClassifier):
@@ -187,17 +180,16 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
             y_true = item.label
             print(y_true)
             feature =  extractor.extract_features(item)
-            print(feature)
             #classify with prceptron
             y_pred = model.predict(feature)
             print(y_pred)
             #compare label and update weights
-            # if y_pred != y_true:
-            #     model.update(feature)
-            #     accuracy.append(0)
-            # else:
-            #     accuracy.append(1)
-        # print("end of epoch %d. the acc is %f" % (epoch, np.mean(accuracy)))
+            if y_pred != y_true:
+                model.update(y_true, feature)
+                accuracy.append(0)
+            else:
+                accuracy.append(1)
+        print("end of epoch %d. the acc is %f" % (epoch, np.mean(accuracy)))
 
 
 def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor: FeatureExtractor) -> LogisticRegressionClassifier:
