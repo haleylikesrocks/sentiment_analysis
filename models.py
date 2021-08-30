@@ -180,35 +180,24 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     #enter epoch
     for epoch in epochs:
         print("the current epoch is %d" % epoch)
-    #shuffle data
-    #extract feature
-    #classify with prceptron
-    #compare label
-    #add to accuracy
-    #update weights
-    short_list = train_exs[:5]
- 
-    for item in short_list:
-        # print(item.label)
-        print(item.words)
-        # print(label)
-        # print(type(item))
-        # print(sentence)
-    # print(train_exs[:10])
-    # accuracy = []
-    # for epoch in range(epochs):
-    #     shuffled_data = train_exs.shuffle()
-    #     for data, label in shuffled_data:
-    #         feature =  extractor.extract(data)
-    #         y_pred = model.forward(feature)
-    #         if y_pred != label:
-    #             model.update()
-    #             accuracy.append(0)
-    #         else:
-    #             accuracy.append(1)
-    #     print("end of epoch %d, the accuracy is %f" % (epoch, np.mean(accuracy)))
+        accuracy = []
+        #shuffle data
+        shuffled_data = train_exs.shuffle()
+        for item in shuffled_data:
+            #extract feature
+            data = item.words
+            y_true = item.label
+            feature =  extractor.extract_features(data)
+            #classify with prceptron
+            y_pred = model.predict(feature)
+            #compare label and update weights
+            if y_pred != y_true:
+                model.update(feature)
+                accuracy.append(0)
+            else:
+                accuracy.append(1)
+        print("end of epoch %d. the acc is %f" % (epoch, np.mean(accuracy)))
 
-    # raise Exception("Must be implemented")
 
 
 def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor: FeatureExtractor) -> LogisticRegressionClassifier:
