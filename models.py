@@ -4,9 +4,17 @@ from sentiment_data import *
 from utils import *
 import re
 import random
-# from .utils import Indexer
+import numpy as np
+import heapq
 
 from collections import Counter
+
+def sparse_vector_dot(a: dict, b: dict):
+    result = 0
+    for key, value in a.items():
+        if key in b:
+            result += b[key] * value
+    return result
 
 class FeatureExtractor(object):
     """
@@ -16,7 +24,7 @@ class FeatureExtractor(object):
         # self.index = Indexer()
         raise Exception("Don't call me, call my subclasses")
 
-    def extract_features(self, sentence: List[str], add_to_indexer: bool=False) -> Counter:
+    def extract_features_1(self, sentence: List[str], add_to_indexer: bool=False) -> Counter:
         """
         Extract features from a sentence represented as a list of words. Includes a flag add_to_indexer to
         :param sentence: words in the example to featurize
@@ -26,21 +34,14 @@ class FeatureExtractor(object):
         a few indices have nonzero value) in essentially the same way as a map. However, you can use whatever data
         structure you prefer, since this does not interact with the framework code.
         """
-        #preform check if valid word and preprocess
-        preprocessed = []
-        for word in sentence:
-            preprocessed.append(re.sub(r'[^\w\s]', '', word).lower())
-        while('' in preprocessed):
-            preprocessed.remove('')
-
         #index sentence
-        # if self.indexer.index_of(word) == -1 and add_to_indexer:
-        #     self.indexer.add_and_get_index(word)
+        # if add_to_indexer:
+        #    if self.indexer.contains(word):
+        #         #increase count ???
+        #     else:
+        #         self.indexer.add_and_get_index(word) 
 
-
-
-        # sparse_vect = Counter(preprocessed)
-        return preprocessed
+        return 
 
         # raise Exception("Don't call me, call my subclasses")
 
@@ -51,9 +52,41 @@ class UnigramFeatureExtractor(FeatureExtractor):
     and any additional preprocessing you want to do.
     """
     def __init__(self, indexer: Indexer):
-        self.indexer = Indexer()
-        print("hello")
-        # raise Exception("Must be implemented")
+        self.indexer = indexer
+    
+    def extract_features(self, sentence: List[str], add_to_indexer: bool=True) -> Counter:
+        feature = {}
+        preprocessed = self.preprocess(sentence)
+        #add count and index to feature set
+        for word in preprocessed:
+            if self.indexer.index_of(word) != -1:
+                feature[self.indexer.index_of(word)] = preprocessed[word]
+        return feature
+
+    def preprocess(self, sentence):
+        preprocessed = []
+        for word in sentence.words:
+            preprocessed.append(re.sub(r'[^\w\s]', '', word).lower())
+        while('' in preprocessed):
+            preprocessed.remove('')
+        return Counter(preprocessed)
+
+    def create_vocab(self, training_ex):
+        vocab = {}
+        for item in training_ex:
+            preprocessed = self.preprocess(item)  # item.words
+        #add all to vocab
+        for word in preprocessed:
+            if word in vocab:
+                vocab[word] += preprocessed[word]
+            else:
+                vocab[word] = preprocessed[word]
+        # take top n results
+        heap = heapq.nlargest(5000, vocab, key=vocab.get)
+        # index
+        for i in range(len(heap)):
+            self.indexer.add_and_get_index(heap[i], add=True)
+        # return
 
 
 class BigramFeatureExtractor(FeatureExtractor):
@@ -98,17 +131,24 @@ class PerceptronClassifier(SentimentClassifier):
     superclass. Hint: you'll probably need this class to wrap both the weight vector and featurizer -- feel free to
     modify the constructor to pass these in.
     """
-    def __init__(self, alpha):
-        self.weights = [0] * 10 # length of bag of words
-        self.alpa = .1
+    def __init__(self, wieghts=[]):
+        self.weights = wieghts # empty dictionary
+        # self.alpa = .1
     
     def forward(self, x):
-        y = self.weights * x 
+        y = sparse_vector_dot(x, self.weights)
         return 1 if y >= 0 else -1
+    
+    def predict(self, sentence: List[str]) -> int:
+        return super().predict(sentence)
 
-    def update(self, y_pred, y_label):
-        if y_pred != y_label:
-            self.weights += self.alpa * y_pred
+    def update(self, y_pred, y_label, x):
+        # TODO move to training code
+        for key, value in x.items():
+            if key in self.weights:
+                self.weights[key] += self.alpa * y_pred * value
+            else:
+                self.weights[key] = y_label - self.alpa * y_pred * value
 
 
 class LogisticRegressionClassifier(SentimentClassifier):
@@ -126,24 +166,47 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     Train a classifier with the perceptron.
     :param train_exs: training set, List of SentimentExample objects
     :param feat_extractor: feature extractor to use
-    :return: trained PerceptronClassifier model
+    :return: trained PerceptronClassifier model with updated weights
     """
-    # epochs = 10
-    # model = PerceptronClassifier()
-    # extractor = UnigramFeatureExtractor()
-    short_list = train_exs[:3]
-    random.shuffle(short_list)
+    #set hyper pramemters
+    epochs = 10
+    #set model, indexer and extracter
+    model = PerceptronClassifier()
+    indexer = Indexer()
+    extractor = UnigramFeatureExtractor(indexer)
+    #make vocab list 
+    extractor.create_vocab(train_exs)
+
+    #enter epoch
+    for epoch in epochs:
+        print("the current epoch is %d" % epoch)
+    #shuffle data
+    #extract feature
+    #classify with prceptron
+    #compare label
+    #add to accuracy
+    #update weights
+    short_list = train_exs[:5]
+ 
     for item in short_list:
-        print(item)
-        print(type(item))
+        # print(item.label)
+        print(item.words)
+        # print(label)
+        # print(type(item))
         # print(sentence)
     # print(train_exs[:10])
-
-    # for epoch in range(epoch):
+    # accuracy = []
+    # for epoch in range(epochs):
     #     shuffled_data = train_exs.shuffle()
-    #     for data in shuffled_data:
-            # feature =  UnigramFeatureExtractor.extract(data)
-            # y_pred = PerceptronClassifier(feat_extractor)
+    #     for data, label in shuffled_data:
+    #         feature =  extractor.extract(data)
+    #         y_pred = model.forward(feature)
+    #         if y_pred != label:
+    #             model.update()
+    #             accuracy.append(0)
+    #         else:
+    #             accuracy.append(1)
+    #     print("end of epoch %d, the accuracy is %f" % (epoch, np.mean(accuracy)))
 
     # raise Exception("Must be implemented")
 
@@ -194,5 +257,6 @@ def train_model(args, train_exs: List[SentimentExample], dev_exs: List[Sentiment
         raise Exception("Pass in TRIVIAL, PERCEPTRON, or LR to run the appropriate system")
     return model
 
-feat = FeatureExtractor()
-print(feat.extract_features(['The', 'Rock', 'is', 'destined', 'to', 'be', 'the', '21st', 'Century', "'s", 'new', '``', 'Conan', "''", 'and', 'that', 'he', "'s", 'going', 'to', 'make', 'a', 'splash', 'even', 'greater', 'than', 'Arnold', 'Schwarzenegger', ',', 'Jean-Claud', 'Van', 'Damme', 'or', 'Steven', 'Segal', '.']))
+index = Indexer()
+feat = UnigramFeatureExtractor(index)
+# print(feat.create_vocab([['The', 'Rock', 'is', 'destined', 'to', 'be', 'the', '21st', 'Century', "'s", 'new', '``', 'Conan', "''", 'and', 'that', 'he', "'s", 'going', 'to', 'make', 'a', 'splash', 'even', 'greater', 'than', 'Arnold', 'Schwarzenegger', ',', 'Jean-Claud', 'Van', 'Damme', 'or', 'Steven', 'Segal', '.']]))

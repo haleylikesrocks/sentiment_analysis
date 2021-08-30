@@ -1,1 +1,1 @@
-from .utils import Indexer
+from utils import Indexer
