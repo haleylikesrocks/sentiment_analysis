@@ -133,16 +133,13 @@ class PerceptronClassifier(SentimentClassifier):
     """
     def __init__(self, wieghts=[]):
         self.weights = wieghts # empty dictionary
-        # self.alpa = .1
+        self.alpa = .1
     
-    def forward(self, x):
+    def predict(self, x) -> int:
         y = sparse_vector_dot(x, self.weights)
-        return 1 if y >= 0 else -1
-    
-    def predict(self, sentence: List[str]) -> int:
-        return super().predict(sentence)
+        return y
 
-    def update(self, y_pred, y_label, x):
+    def update(self, feature):
         # TODO move to training code
         for key, value in x.items():
             if key in self.weights:
@@ -168,6 +165,8 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     :param feat_extractor: feature extractor to use
     :return: trained PerceptronClassifier model with updated weights
     """
+    #shortened for testing:
+    short_list = train_exs[:10]
     #set hyper pramemters
     epochs = 10
     #set model, indexer and extracter
@@ -175,14 +174,14 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     indexer = Indexer()
     extractor = UnigramFeatureExtractor(indexer)
     #make vocab list 
-    extractor.create_vocab(train_exs)
+    extractor.create_vocab(short_list)
 
     #enter epoch
     for epoch in epochs:
         print("the current epoch is %d" % epoch)
         accuracy = []
         #shuffle data
-        shuffled_data = train_exs.shuffle()
+        shuffled_data = short_list.shuffle()
         for item in shuffled_data:
             #extract feature
             data = item.words
@@ -190,14 +189,14 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
             feature =  extractor.extract_features(data)
             #classify with prceptron
             y_pred = model.predict(feature)
+            print(y_pred)
             #compare label and update weights
-            if y_pred != y_true:
-                model.update(feature)
-                accuracy.append(0)
-            else:
-                accuracy.append(1)
+            # if y_pred != y_true:
+            #     model.update(feature)
+            #     accuracy.append(0)
+            # else:
+            #     accuracy.append(1)
         print("end of epoch %d. the acc is %f" % (epoch, np.mean(accuracy)))
-
 
 
 def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor: FeatureExtractor) -> LogisticRegressionClassifier:
