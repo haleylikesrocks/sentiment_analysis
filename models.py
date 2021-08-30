@@ -130,7 +130,7 @@ class PerceptronClassifier(SentimentClassifier):
     
     def predict(self, x) -> int:
         y = 0
-        for key, value in x:
+        for key, value in x.items:
             y += value * self.weights[key]
         ret = 1 if y > 0 else 0
         return ret
@@ -185,6 +185,7 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
             print(y_pred)
             #compare label and update weights
             if y_pred != y_true:
+                print(feature)
                 model.update(y_true, feature)
                 accuracy.append(0)
             else:
