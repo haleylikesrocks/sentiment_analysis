@@ -47,18 +47,12 @@ class UnigramFeatureExtractor(FeatureExtractor):
     def __init__(self, indexer: Indexer):
         self.indexer = indexer
     
-    def extract_features(self, sentence: List[str], add_to_indexer: bool=True) -> Counter:
-        feature = {}
-        preprocessed = self.preprocess(sentence)
-        #add count and index to feature set
-        for word in preprocessed:
-            if self.indexer.index_of(word) != -1:
-                feature[self.indexer.index_of(word)] = preprocessed[word]
-        return feature
+    def get_indexer(self):
+        return self.indexer
 
-    def preprocess(self, sentence):
+    def extract_features(self, sentence: List[str], add_to_indexer: bool=True) -> Counter:
         preprocessed = []
-        for word in sentence.words:
+        for word in sentence:
             preprocessed.append(re.sub(r'[^\w\s]', '', word).lower())
         while('' in preprocessed):
             preprocessed.remove('')
@@ -67,7 +61,8 @@ class UnigramFeatureExtractor(FeatureExtractor):
     def create_vocab(self, training_ex):
         vocab = {}
         for item in training_ex:
-            preprocessed = self.preprocess(item)
+            sentence = item.words
+            preprocessed = self.extract_features(sentence)
             #add all to vocab
             for word in preprocessed:
                 if word in vocab:
@@ -75,7 +70,7 @@ class UnigramFeatureExtractor(FeatureExtractor):
                 else:
                     vocab[word] = preprocessed[word]
         # take top n results
-        heap = heapq.nlargest(5000, vocab, key=vocab.get)
+        heap = heapq.nlargest(10000, vocab, key=vocab.get)
         # index
         for i in range(len(heap)):
             self.indexer.add_and_get_index(heap[i], add=True)
@@ -124,21 +119,37 @@ class PerceptronClassifier(SentimentClassifier):
     superclass. Hint: you'll probably need this class to wrap both the weight vector and featurizer -- feel free to
     modify the constructor to pass these in.
     """
-    def __init__(self, weights=np.zeros(5000)):
-        self.weights = weights # empty dictionary
-        self.alpa = .1
+    def __init__(self, extractor, weights=np.zeros(10000)):
+        self.weights = weights # empty array
+        self.alpa = .3
+        self.indexer = extractor.get_indexer()
+        self.extractor = extractor
     
     def predict(self, x) -> int:
+        #extract feature
+        features = self.extractor.extract_features(x)
+
+        #initialize prediction
         y = 0
-        for key in x:
-            y += x[key] * self.weights[key]
+        #translate to index
+        for word in features:
+            key = self.indexer.index_of(word)
+            if key != -1:
+                #add to dot product
+                y += features[word] * self.weights[key]
+        #set return value
         ret = 1 if y > 0 else 0
         return ret
 
     def update(self, y_true, feature):
+        #determine direction
         mult = 1 if y_true == 1 else -1
-        for key, value in feature.items():
-            self.weights[key] += self.alpa * value * mult
+        #translate to index
+        for word in feature:
+            key = self.indexer.index_of(word)
+            if key != -1:
+                #update weights
+                self.weights[key] += self.alpa * feature[word] * mult
 
 
 class LogisticRegressionClassifier(SentimentClassifier):
@@ -158,16 +169,12 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     :param feat_extractor: feature extractor to use
     :return: trained PerceptronClassifier model with updated weights
     """
-    #shortened for testing:
-    # short_list = train_exs[:10]
     #set hyper pramemters
-    epochs = 10
-    #set model, indexer and extracter
-    model = PerceptronClassifier()
-    indexer = Indexer()
-    extractor = UnigramFeatureExtractor(indexer)
-    #make vocab list 
-    extractor.create_vocab(train_exs)
+    epochs = 5
+    #set model and make vocab list
+    feat_extractor.create_vocab(train_exs)
+    #TODO amake play nice
+    model = PerceptronClassifier(feat_extractor)
 
     #enter epoch
     for epoch in range(epochs):
@@ -178,7 +185,7 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
         for item in train_exs:
             #extract feature
             y_true = item.label
-            feature =  extractor.extract_features(item)
+            feature =  feat_extractor.extract_features(item.words)
             #classify with prceptron
             y_pred = model.predict(feature)
             #compare label and update weights
