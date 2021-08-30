@@ -74,13 +74,13 @@ class UnigramFeatureExtractor(FeatureExtractor):
     def create_vocab(self, training_ex):
         vocab = {}
         for item in training_ex:
-            preprocessed = self.preprocess(item)  # item.words
-        #add all to vocab
-        for word in preprocessed:
-            if word in vocab:
-                vocab[word] += preprocessed[word]
-            else:
-                vocab[word] = preprocessed[word]
+            preprocessed = self.preprocess(item)
+            #add all to vocab
+            for word in preprocessed:
+                if word in vocab:
+                    vocab[word] += preprocessed[word]
+                else:
+                    vocab[word] = preprocessed[word]
         # take top n results
         heap = heapq.nlargest(5000, vocab, key=vocab.get)
         # index
@@ -168,7 +168,7 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     #shortened for testing:
     short_list = train_exs[:10]
     #set hyper pramemters
-    epochs = 10
+    epochs = 1
     #set model, indexer and extracter
     model = PerceptronClassifier()
     indexer = Indexer()
@@ -177,16 +177,17 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     extractor.create_vocab(short_list)
 
     #enter epoch
-    for epoch in epochs:
+    for epoch in range(epochs):
         print("the current epoch is %d" % epoch)
         accuracy = []
         #shuffle data
-        shuffled_data = short_list.shuffle()
-        for item in shuffled_data:
+        random.shuffle(short_list)
+        for item in short_list:
             #extract feature
-            data = item.words
             y_true = item.label
-            feature =  extractor.extract_features(data)
+            print(y_true)
+            feature =  extractor.extract_features(item)
+            print(feature)
             #classify with prceptron
             y_pred = model.predict(feature)
             print(y_pred)
@@ -196,7 +197,7 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
             #     accuracy.append(0)
             # else:
             #     accuracy.append(1)
-        print("end of epoch %d. the acc is %f" % (epoch, np.mean(accuracy)))
+        # print("end of epoch %d. the acc is %f" % (epoch, np.mean(accuracy)))
 
 
 def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor: FeatureExtractor) -> LogisticRegressionClassifier:
