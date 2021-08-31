@@ -158,7 +158,6 @@ class BetterFeatureExtractor(FeatureExtractor):
         # return
 
 
-
 class SentimentClassifier(object):
     """
     Sentiment classifier base type
