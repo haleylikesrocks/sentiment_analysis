@@ -193,41 +193,43 @@ class LogisticRegressionClassifier(SentimentClassifier):
     """
     def __init__(self, extractor, weights=np.zeros(10000)):
         self.weights = weights # empty array
-        self.alpa = .9
+        self.alpa = .1
         self.indexer = extractor.get_indexer()
         self.extractor = extractor
+        self.features = []
     
     def predict(self, x) -> int:
         #extract feature
-        features = self.extractor.extract_features(x)
+        self.features = self.extractor.extract_features(x)
 
         #initialize prediction
-        y = 0
+        wTfx  = 0
         #translate to index
-        for word in features:
+        for word in self.features:
             key = self.indexer.index_of(word)
             if key != -1:
                 #add to dot product
-                y += features[word] * self.weights[key]
+                wTfx  += self.features[word] * self.weights[key]
+        # y  = 1 / (1 + np.exp(wTfx))
         #set return value
-        self.wTfx = y
-        ret = 1 if y > 0 else 0
+        self.wTfx = wTfx 
+        ret = 1 if wTfx > 0 else 0
         return ret
 
-    def calc_loss(self, y_true, y_pred):
-        return -np.mean(y_true*(np.log(y_pred)) - (1-y_true)*np.log(1-y_pred))
-        # return math.log(1- math.exp(self.wTfx)) - self.wTfx
+    def calc_loss(self):
+        return np.log(1 + np.exp(self.wTfx)) - self.wTfx
 
-    def update(self, y_true, y_pred, feature):
-        #determine direction
-        # mult = 1 if y_true == 1 else -1
+    def update(self, y_true):
         #translate to index
-        for word in feature:
+        for word in self.features:
             key = self.indexer.index_of(word)
             if key != -1:
                 #update weights
-                self.weights[key] -= feature[word] * (y_pred - y_true)
-                # self.weights[key] += self.alpa * feature[word] * (1 - (math.exp(self.wTfx)/(1+math.exp(self.wTfx)))) * mult
+                if y_true == 1:
+                    self.weights[key] += self.alpa * self.features[word] * (1 - (np.exp(self.wTfx)/(1+np.exp(self.wTfx))))
+                else:
+                    self.weights[key] -= self.alpa * self.features[word] * (np.exp(self.wTfx)/(1+np.exp(self.wTfx)))
+
 
 
 def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureExtractor) -> PerceptronClassifier:
@@ -275,7 +277,7 @@ def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor:
     :return: trained LogisticRegressionClassifier model
     """
     #set hyper pramemters
-    epochs = 5
+    epochs = 8
     #set model and make vocab list
     feat_extractor.create_vocab(train_exs)
     #TODO amake play nice
@@ -291,16 +293,16 @@ def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor:
         for item in train_exs:
             #extract feature
             y_true = item.label
-            feature =  feat_extractor.extract_features(item.words)
             #classify with lr
             #plug into equation for prediction
-            y_pred = model.predict(feature)
+            y_pred = model.predict(item.words)
             #calculate loss
-            loss = model.calc_loss(y_true, y_pred)
+            loss = model.calc_loss()
             losses.append(loss)
             #update weights
-            model.update(y_true, y_pred, feature)
-            if y_pred != y_true:
+            model.update(y_true)
+            #calculate accuracy
+            if (y_pred != y_true):
                 accuracy.append(0)
             else:
                 accuracy.append(1)
