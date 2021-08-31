@@ -160,29 +160,29 @@ class PerceptronClassifier(SentimentClassifier):
     
     def predict(self, x) -> int:
         #extract feature
-        features = self.extractor.extract_features(x)
+        self.features = self.extractor.extract_features(x)
 
         #initialize prediction
         y = 0
         #translate to index
-        for word in features:
+        for word in self.features:
             key = self.indexer.index_of(word)
             if key != -1:
                 #add to dot product
-                y += features[word] * self.weights[key]
+                y += self.features[word] * self.weights[key]
         #set return value
         ret = 1 if y > 0 else 0
         return ret
 
-    def update(self, y_true, feature):
+    def update(self, y_true):
         #determine direction
         mult = 1 if y_true == 1 else -1
         #translate to index
-        for word in feature:
+        for word in self.features:
             key = self.indexer.index_of(word)
             if key != -1:
                 #update weights
-                self.weights[key] += self.alpa * feature[word] * mult
+                self.weights[key] += self.alpa * self.features[word] * mult
 
 
 class LogisticRegressionClassifier(SentimentClassifier):
@@ -231,7 +231,6 @@ class LogisticRegressionClassifier(SentimentClassifier):
                     self.weights[key] -= self.alpa * self.features[word] * (np.exp(self.wTfx)/(1+np.exp(self.wTfx)))
 
 
-
 def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureExtractor) -> PerceptronClassifier:
     """
     Train a classifier with the perceptron.
@@ -243,9 +242,10 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     epochs = 5
     #set model and make vocab list
     feat_extractor.create_vocab(train_exs)
-    #TODO amake play nice
     model = PerceptronClassifier(feat_extractor)
-
+    # for early stopping
+    # ret_model = model
+    # best_acc = 0
     #enter epoch
     for epoch in range(epochs):
         print("the current epoch is %d" % epoch)
@@ -255,12 +255,11 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
         for item in train_exs:
             #extract feature
             y_true = item.label
-            feature =  feat_extractor.extract_features(item.words)
             #classify with prceptron
-            y_pred = model.predict(feature)
+            y_pred = model.predict(item.words)
             #compare label and update weights
             if y_pred != y_true:
-                model.update(y_true, feature)
+                model.update(y_true)
                 accuracy.append(0)
             else:
                 accuracy.append(1)
@@ -346,7 +345,3 @@ def train_model(args, train_exs: List[SentimentExample], dev_exs: List[Sentiment
     else:
         raise Exception("Pass in TRIVIAL, PERCEPTRON, or LR to run the appropriate system")
     return model
-
-index = Indexer()
-feat = UnigramFeatureExtractor(index)
-# print(feat.create_vocab([['The', 'Rock', 'is', 'destined', 'to', 'be', 'the', '21st', 'Century', "'s", 'new', '``', 'Conan', "''", 'and', 'that', 'he', "'s", 'going', 'to', 'make', 'a', 'splash', 'even', 'greater', 'than', 'Arnold', 'Schwarzenegger', ',', 'Jean-Claud', 'Van', 'Damme', 'or', 'Steven', 'Segal', '.']]))
