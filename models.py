@@ -6,9 +6,10 @@ import re
 import random
 import numpy as np
 import heapq
-import math
 
 from collections import Counter
+import nltk
+from nltk.corpus import stopwords
 
 class FeatureExtractor(object):
     """
@@ -123,7 +124,39 @@ class BetterFeatureExtractor(FeatureExtractor):
     Better feature extractor...try whatever you can think of!
     """
     def __init__(self, indexer: Indexer):
-        raise Exception("Must be implemented")
+        self.indexer = indexer
+    
+    def get_indexer(self):
+        return self.indexer
+
+    def extract_features(self, sentence: List[str], add_to_indexer: bool=True) -> Counter:
+        preprocessed = []
+        stop_words = ["i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now"]
+        for word in sentence:
+            if word.lower() not in stop_words:
+                preprocessed.append(re.sub(r'[^\w\s]', '', word).lower())
+        while('' in preprocessed):
+            preprocessed.remove('')
+        return Counter(preprocessed)
+
+    def create_vocab(self, training_ex):
+        vocab = {}
+        for item in training_ex:
+            sentence = item.words
+            preprocessed = self.extract_features(sentence)
+            #add all to vocab
+            for word in preprocessed:
+                if word in vocab:
+                    vocab[word] += preprocessed[word]
+                else:
+                    vocab[word] = preprocessed[word]
+        # take top n results
+        heap = heapq.nlargest(10000, vocab, key=vocab.get)
+        # index
+        for i in range(len(heap)):
+            self.indexer.add_and_get_index(heap[i], add=True)
+        # return
+
 
 
 class SentimentClassifier(object):
@@ -243,9 +276,6 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     #set model and make vocab list
     feat_extractor.create_vocab(train_exs)
     model = PerceptronClassifier(feat_extractor)
-    # for early stopping
-    # ret_model = model
-    # best_acc = 0
     #enter epoch
     for epoch in range(epochs):
         print("the current epoch is %d" % epoch)

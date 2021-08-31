@@ -35,6 +35,14 @@
       "program": "sentiment_classifier.py",
       "console": "integratedTerminal",
       "args": ["--model", "LR", "--feats", "BIGRAM"]
-      }
+      },
+      {
+        "name": "lr better",
+        "type": "python",
+        "request": "launch",
+        "program": "sentiment_classifier.py",
+        "console": "integratedTerminal",
+        "args": ["--model", "LR", "--feats", "BETTER"]
+        }
   ]
 }
