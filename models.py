@@ -6,6 +6,7 @@ import re
 import random
 import numpy as np
 import heapq
+import math
 
 from collections import Counter
 
@@ -117,7 +118,6 @@ class BigramFeatureExtractor(FeatureExtractor):
         # return
 
 
-
 class BetterFeatureExtractor(FeatureExtractor):
     """
     Better feature extractor...try whatever you can think of!
@@ -193,7 +193,7 @@ class LogisticRegressionClassifier(SentimentClassifier):
     """
     def __init__(self, extractor, weights=np.zeros(10000)):
         self.weights = weights # empty array
-        self.alpa = .1
+        self.alpa = .9
         self.indexer = extractor.get_indexer()
         self.extractor = extractor
     
@@ -210,21 +210,24 @@ class LogisticRegressionClassifier(SentimentClassifier):
                 #add to dot product
                 y += features[word] * self.weights[key]
         #set return value
+        self.wTfx = y
         ret = 1 if y > 0 else 0
         return ret
 
-    def calc_loss(self):
-        pass
+    def calc_loss(self, y_true, y_pred):
+        return -np.mean(y_true*(np.log(y_pred)) - (1-y_true)*np.log(1-y_pred))
+        # return math.log(1- math.exp(self.wTfx)) - self.wTfx
 
-    def update(self, y_true, feature):
+    def update(self, y_true, y_pred, feature):
         #determine direction
-        mult = 1 if y_true == 1 else -1
+        # mult = 1 if y_true == 1 else -1
         #translate to index
         for word in feature:
             key = self.indexer.index_of(word)
             if key != -1:
                 #update weights
-                self.weights[key] += self.alpa * feature[word] * mult
+                self.weights[key] -= feature[word] * (y_pred - y_true)
+                # self.weights[key] += self.alpa * feature[word] * (1 - (math.exp(self.wTfx)/(1+math.exp(self.wTfx)))) * mult
 
 
 def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureExtractor) -> PerceptronClassifier:
@@ -293,10 +296,10 @@ def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor:
             #plug into equation for prediction
             y_pred = model.predict(feature)
             #calculate loss
-            loss = model.calc_loss()
+            loss = model.calc_loss(y_true, y_pred)
             losses.append(loss)
             #update weights
-            model.update(y_true, feature)
+            model.update(y_true, y_pred, feature)
             if y_pred != y_true:
                 accuracy.append(0)
             else:
