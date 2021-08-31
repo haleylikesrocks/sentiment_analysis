@@ -11,6 +11,30 @@
       "program": "sentiment_classifier.py",
       "console": "integratedTerminal",
       "args": ["--model", "PERCEPTRON", "--feats", "UNIGRAM"]
-    }
+    },
+    {
+    "name": "perceptron bigram",
+    "type": "python",
+    "request": "launch",
+    "program": "sentiment_classifier.py",
+    "console": "integratedTerminal",
+    "args": ["--model", "PERCEPTRON", "--feats", "BIGRAM"]
+    },
+    {
+      "name": "lr unigram",
+      "type": "python",
+      "request": "launch",
+      "program": "sentiment_classifier.py",
+      "console": "integratedTerminal",
+      "args": ["--model", "LR", "--feats", "UNIGRAM"]
+    },
+    {
+      "name": "lr bigram",
+      "type": "python",
+      "request": "launch",
+      "program": "sentiment_classifier.py",
+      "console": "integratedTerminal",
+      "args": ["--model", "LR", "--feats", "BIGRAM"]
+      }
   ]
 }

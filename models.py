@@ -82,7 +82,40 @@ class BigramFeatureExtractor(FeatureExtractor):
     Bigram feature extractor analogous to the unigram one.
     """
     def __init__(self, indexer: Indexer):
-        raise Exception("Must be implemented")
+        self.indexer = indexer
+    
+    def get_indexer(self):
+        return self.indexer
+
+    def extract_features(self, sentence: List[str], add_to_indexer: bool=True) -> Counter:
+        preprocessed = []
+        for word in sentence:
+            preprocessed.append(re.sub(r'[^\w\s]', '', word).lower())
+        while('' in preprocessed):
+            preprocessed.remove('')
+        pairs_list = []
+        for i in range(len(preprocessed)-1):
+            pairs_list.append(preprocessed[i] + '|' + preprocessed[i+1])
+        return Counter(pairs_list)
+
+    def create_vocab(self, training_ex):
+        vocab = {}
+        for item in training_ex:
+            sentence = item.words
+            preprocessed = self.extract_features(sentence)
+            #add all to vocab
+            for word in preprocessed:
+                if word in vocab:
+                    vocab[word] += preprocessed[word]
+                else:
+                    vocab[word] = preprocessed[word]
+        # take top n results
+        heap = heapq.nlargest(10000, vocab, key=vocab.get)
+        # index
+        for i in range(len(heap)):
+            self.indexer.add_and_get_index(heap[i], add=True)
+        # return
+
 
 
 class BetterFeatureExtractor(FeatureExtractor):
@@ -158,8 +191,40 @@ class LogisticRegressionClassifier(SentimentClassifier):
     superclass. Hint: you'll probably need this class to wrap both the weight vector and featurizer -- feel free to
     modify the constructor to pass these in.
     """
-    def __init__(self):
-        raise Exception("Must be implemented")
+    def __init__(self, extractor, weights=np.zeros(10000)):
+        self.weights = weights # empty array
+        self.alpa = .1
+        self.indexer = extractor.get_indexer()
+        self.extractor = extractor
+    
+    def predict(self, x) -> int:
+        #extract feature
+        features = self.extractor.extract_features(x)
+
+        #initialize prediction
+        y = 0
+        #translate to index
+        for word in features:
+            key = self.indexer.index_of(word)
+            if key != -1:
+                #add to dot product
+                y += features[word] * self.weights[key]
+        #set return value
+        ret = 1 if y > 0 else 0
+        return ret
+
+    def calc_loss(self):
+        pass
+
+    def update(self, y_true, feature):
+        #determine direction
+        mult = 1 if y_true == 1 else -1
+        #translate to index
+        for word in feature:
+            key = self.indexer.index_of(word)
+            if key != -1:
+                #update weights
+                self.weights[key] += self.alpa * feature[word] * mult
 
 
 def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureExtractor) -> PerceptronClassifier:
@@ -206,7 +271,39 @@ def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor:
     :param feat_extractor: feature extractor to use
     :return: trained LogisticRegressionClassifier model
     """
-    raise Exception("Must be implemented")
+    #set hyper pramemters
+    epochs = 5
+    #set model and make vocab list
+    feat_extractor.create_vocab(train_exs)
+    #TODO amake play nice
+    model = LogisticRegressionClassifier(feat_extractor)
+
+    #enter epoch
+    for epoch in range(epochs):
+        print("the current epoch is %d" % epoch)
+        accuracy = []
+        losses = []
+        #shuffle data
+        random.shuffle(train_exs)
+        for item in train_exs:
+            #extract feature
+            y_true = item.label
+            feature =  feat_extractor.extract_features(item.words)
+            #classify with lr
+            #plug into equation for prediction
+            y_pred = model.predict(feature)
+            #calculate loss
+            loss = model.calc_loss()
+            losses.append(loss)
+            #update weights
+            model.update(y_true, feature)
+            if y_pred != y_true:
+                accuracy.append(0)
+            else:
+                accuracy.append(1)
+        print("end of epoch %d. the acc is %f and the loss is %f" % (epoch, np.mean(accuracy), np.mean(losses)))
+    
+    return model
 
 
 def train_model(args, train_exs: List[SentimentExample], dev_exs: List[SentimentExample]) -> SentimentClassifier:
