@@ -130,9 +130,9 @@ class PerceptronClassifier(SentimentClassifier):
     superclass. Hint: you'll probably need this class to wrap both the weight vector and featurizer -- feel free to
     modify the constructor to pass these in.
     """
-    def __init__(self, extractor, weights=np.zeros(10000)):
+    def __init__(self, extractor, weights=np.zeros(10000), alpha=0.3):
         self.weights = weights # empty array
-        self.alpa = .3
+        self.alpa = alpha
         self.indexer = extractor.get_indexer()
         self.extractor = extractor
     
@@ -169,9 +169,9 @@ class LogisticRegressionClassifier(SentimentClassifier):
     superclass. Hint: you'll probably need this class to wrap both the weight vector and featurizer -- feel free to
     modify the constructor to pass these in.
     """
-    def __init__(self, extractor, weights=np.zeros(10000)):
+    def __init__(self, extractor, weights=np.zeros(10000), alpha=0.1):
         self.weights = weights # empty array
-        self.alpa = .1
+        self.alpa = alpha
         self.indexer = extractor.get_indexer()
         self.extractor = extractor
         self.features = []
@@ -217,10 +217,10 @@ def train_perceptron(train_exs: List[SentimentExample], feat_extractor: FeatureE
     :return: trained PerceptronClassifier model with updated weights
     """
     #set hyper pramemters
-    epochs = 5
+    epochs = 8
     #set model and make vocab list
     feat_extractor.create_vocab(train_exs)
-    model = PerceptronClassifier(feat_extractor)
+    model = PerceptronClassifier(feat_extractor, alpha=.2)
     #enter epoch
     for epoch in range(epochs):
         print("the current epoch is %d" % epoch)
@@ -251,11 +251,12 @@ def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor:
     :return: trained LogisticRegressionClassifier model
     """
     #set hyper pramemters
-    epochs = 8
+    epochs = 10
+    vocab_length = 8000
     #set model and make vocab list
-    feat_extractor.create_vocab(train_exs)
+    feat_extractor.create_vocab(train_exs, length=vocab_length)
     #TODO amake play nice
-    model = LogisticRegressionClassifier(feat_extractor)
+    model = LogisticRegressionClassifier(feat_extractor, alpha=0.2, weights=np.zeros(vocab_length))
 
     #enter epoch
     for epoch in range(epochs):
@@ -268,7 +269,6 @@ def train_logistic_regression(train_exs: List[SentimentExample], feat_extractor:
             #extract feature
             y_true = item.label
             #classify with lr
-            #plug into equation for prediction
             y_pred = model.predict(item.words)
             #calculate loss
             loss = model.calc_loss()
