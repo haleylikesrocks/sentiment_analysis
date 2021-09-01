@@ -15,37 +15,6 @@ class FeatureExtractor(object):
     """
     Feature extraction base type. Takes a sentence and returns an indexed list of features.
     """
-    def get_indexer(self):
-        # self.index = Indexer()
-        raise Exception("Don't call me, call my subclasses")
-
-    def extract_features_1(self, sentence: List[str], add_to_indexer: bool=False) -> Counter:
-        """
-        Extract features from a sentence represented as a list of words. Includes a flag add_to_indexer to
-        :param sentence: words in the example to featurize
-        :param add_to_indexer: True if we should grow the dimensionality of the featurizer if new features are encountered.
-        At test time, any unseen features should be discarded, but at train time, we probably want to keep growing it.
-        :return: A feature vector. We suggest using a Counter[int], which can encode a sparse feature vector (only
-        a few indices have nonzero value) in essentially the same way as a map. However, you can use whatever data
-        structure you prefer, since this does not interact with the framework code.
-        """
-        #index sentence
-        # if add_to_indexer:
-        #    if self.indexer.contains(word):
-        #         #increase count ???
-        #     else:
-        #         self.indexer.add_and_get_index(word) 
-
-        return 
-
-        # raise Exception("Don't call me, call my subclasses")
-
-
-class UnigramFeatureExtractor(FeatureExtractor):
-    """
-    Extracts unigram bag-of-words features from a sentence. It's up to you to decide how you want to handle counts
-    and any additional preprocessing you want to do.
-    """
     def __init__(self, indexer: Indexer):
         self.indexer = indexer
     
@@ -53,14 +22,9 @@ class UnigramFeatureExtractor(FeatureExtractor):
         return self.indexer
 
     def extract_features(self, sentence: List[str], add_to_indexer: bool=True) -> Counter:
-        preprocessed = []
-        for word in sentence:
-            preprocessed.append(re.sub(r'[^\w\s]', '', word).lower())
-        while('' in preprocessed):
-            preprocessed.remove('')
-        return Counter(preprocessed)
+        return -1
 
-    def create_vocab(self, training_ex):
+    def create_vocab(self, training_ex, length=10000):
         vocab = {}
         for item in training_ex:
             sentence = item.words
@@ -72,11 +36,28 @@ class UnigramFeatureExtractor(FeatureExtractor):
                 else:
                     vocab[word] = preprocessed[word]
         # take top n results
-        heap = heapq.nlargest(10000, vocab, key=vocab.get)
+        heap = heapq.nlargest(length, vocab, key=vocab.get)
         # index
         for i in range(len(heap)):
             self.indexer.add_and_get_index(heap[i], add=True)
         # return
+
+
+class UnigramFeatureExtractor(FeatureExtractor):
+    """
+    Extracts unigram bag-of-words features from a sentence. It's up to you to decide how you want to handle counts
+    and any additional preprocessing you want to do.
+    """
+    def __init__(self, indexer: Indexer):
+        super().__init__(indexer=indexer)
+
+    def extract_features(self, sentence: List[str], add_to_indexer: bool=True) -> Counter:
+        preprocessed = []
+        for word in sentence:
+            preprocessed.append(re.sub(r'[^\w\s]', '', word).lower())
+        while('' in preprocessed):
+            preprocessed.remove('')
+        return Counter(preprocessed)
 
 
 class BigramFeatureExtractor(FeatureExtractor):
@@ -84,10 +65,7 @@ class BigramFeatureExtractor(FeatureExtractor):
     Bigram feature extractor analogous to the unigram one.
     """
     def __init__(self, indexer: Indexer):
-        self.indexer = indexer
-    
-    def get_indexer(self):
-        return self.indexer
+        super().__init__(indexer=indexer)
 
     def extract_features(self, sentence: List[str], add_to_indexer: bool=True) -> Counter:
         preprocessed = []
@@ -100,34 +78,13 @@ class BigramFeatureExtractor(FeatureExtractor):
             pairs_list.append(preprocessed[i] + '|' + preprocessed[i+1])
         return Counter(pairs_list)
 
-    def create_vocab(self, training_ex):
-        vocab = {}
-        for item in training_ex:
-            sentence = item.words
-            preprocessed = self.extract_features(sentence)
-            #add all to vocab
-            for word in preprocessed:
-                if word in vocab:
-                    vocab[word] += preprocessed[word]
-                else:
-                    vocab[word] = preprocessed[word]
-        # take top n results
-        heap = heapq.nlargest(10000, vocab, key=vocab.get)
-        # index
-        for i in range(len(heap)):
-            self.indexer.add_and_get_index(heap[i], add=True)
-        # return
-
 
 class BetterFeatureExtractor(FeatureExtractor):
     """
     Better feature extractor...try whatever you can think of!
     """
     def __init__(self, indexer: Indexer):
-        self.indexer = indexer
-    
-    def get_indexer(self):
-        return self.indexer
+        super().__init__(indexer=indexer)
 
     def extract_features(self, sentence: List[str], add_to_indexer: bool=True) -> Counter:
         preprocessed = []
@@ -145,24 +102,6 @@ class BetterFeatureExtractor(FeatureExtractor):
         while('' in preprocessed):
             preprocessed.remove('')
         return Counter(preprocessed)
-
-    def create_vocab(self, training_ex):
-        vocab = {}
-        for item in training_ex:
-            sentence = item.words
-            preprocessed = self.extract_features(sentence)
-            #add all to vocab
-            for word in preprocessed:
-                if word in vocab:
-                    vocab[word] += preprocessed[word]
-                else:
-                    vocab[word] = preprocessed[word]
-        # take top n results
-        heap = heapq.nlargest(10000, vocab, key=vocab.get)
-        # index
-        for i in range(len(heap)):
-            self.indexer.add_and_get_index(heap[i], add=True)
-        # return
 
 
 class SentimentClassifier(object):
