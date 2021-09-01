@@ -131,10 +131,17 @@ class BetterFeatureExtractor(FeatureExtractor):
 
     def extract_features(self, sentence: List[str], add_to_indexer: bool=True) -> Counter:
         preprocessed = []
-        stop_words = ["i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now"]
-        for word in sentence:
+        # I removed the negators from the list
+        neg_words = ['not', 'nor', 'no', 'nt']
+        stop_words = ["i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has", "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until", "while", "of", "at", "by", "for", "with", "about",  "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "in", "on", "again", "further", "then", "here", "there", "when", "where", "all", "any", "both", "each", "other", "some", "such", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now"]
+        for i in range(len(sentence)):
+            word = sentence[i]
             if word.lower() not in stop_words:
-                preprocessed.append(re.sub(r'[^\w\s]', '', word).lower())
+                word = re.sub(r'[^\w\s]', '', word).lower()
+                #create a bigram if the word is a negate word
+                if word in neg_words and i+1 < len(sentence):
+                    word = word + '|' + sentence[i+1]
+                preprocessed.append(word)
         while('' in preprocessed):
             preprocessed.remove('')
         return Counter(preprocessed)
